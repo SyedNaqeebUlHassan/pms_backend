@@ -49,7 +49,14 @@ export class UserController {
   @Roles([UserRole.ADMIN])
   @Patch(':id/block')
   @HttpCode(HttpStatus.OK)
-  async blockUser(@Param('id') userId: string) {
+  async blockUser(
+    @CurrentUser('id') operatorId: string,
+    @Param('id') userId: string,
+  ) {
+    // Prevent user from blocking themselves
+    if (operatorId === userId) {
+      throw new ForbiddenException('You cannot block your own account');
+    }
     return this.userService.blockUser(userId);
   }
 
