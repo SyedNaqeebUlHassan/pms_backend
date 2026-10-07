@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsEmail,
   IsEnum,
   IsString,
   Matches,
@@ -14,10 +15,8 @@ export class RegisterDto {
   @MaxLength(100)
   name: string;
 
-  @IsString()
-  @MinLength(3)
-  @MaxLength(100)
-  user_name: string;
+  @IsEmail()
+  email: string;
 
   @IsString()
   @MinLength(8)

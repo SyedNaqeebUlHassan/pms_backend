@@ -20,7 +20,7 @@ export interface AuthResponse {
   refresh_token: string;
   user: {
     name: string;
-    user_name: string;
+    email: string;
     role: UserRole;
     is_active: boolean;
   };
@@ -49,13 +49,13 @@ export class AuthService {
 
       const user = await queryRunner.manager.findOne(User, {
         where: {
-          user_name: dto.user_name,
+          email: dto.email,
         },
       });
 
       if (user)
         throw new ConflictException(
-          'User with this name already exists. Use different name',
+          'User with this email already exists. Use different email',
         );
 
       //2. hash the password
@@ -66,7 +66,7 @@ export class AuthService {
 
       const createUser = queryRunner.manager.create(User, {
         name: dto.name,
-        user_name: dto.user_name,
+        email: dto.email,
         password: hashedPassword,
         role: dto.role,
         is_active: dto.is_active,
@@ -92,7 +92,7 @@ export class AuthService {
 
     const findUser = await this.userRepo.findOne({
       where: {
-        user_name: dto.user_name,
+        email: dto.email,
       },
     });
 
@@ -121,10 +121,25 @@ export class AuthService {
     };
   }
 
+  async logout(userId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.refresh_token = null;
+
+    await this.userRepo.save(user);
+
+    return { message: 'Logout successfully' };
+  }
+
+  async refreshToken(user: User) {
+    return this.generateAuthToken(user);
+  }
+
   private async generateAuthToken(user: User): Promise<AuthResponse> {
     const payload: JWTPayload = {
       sub: user.id,
-      user_name: user.user_name,
+      email: user.email,
       role: user.role,
       is_active: user.is_active,
     };
@@ -148,7 +163,7 @@ export class AuthService {
       refresh_token: refreshToken,
       user: {
         name: user.name,
-        user_name: user.user_name,
+        email: user.email,
         role: user.role,
         is_active: user.is_active,
       },

@@ -20,8 +20,8 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
-  user_name: string;
+  @Column({ type: 'varchar', length: 150, unique: true })
+  email: string;
 
   @Column({ type: 'varchar', length: 255 })
   @Exclude()
@@ -36,9 +36,13 @@ export class User {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true, default: null })
   @Exclude()
   refresh_token: string | null;
+
+  @Column({ type: 'varchar', nullable: true, default: null })
+  @Exclude()
+  password_reset_token: string | null;
 
   @CreateDateColumn()
   created_at: Date;
