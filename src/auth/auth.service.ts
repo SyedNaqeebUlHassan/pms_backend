@@ -129,7 +129,7 @@ export class AuthService {
 
     await this.userRepo.save(user);
 
-    return { message: 'Logout successfully' };
+    return { message: 'Logout successfully.' };
   }
 
   async refreshToken(user: User) {
