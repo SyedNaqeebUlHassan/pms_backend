@@ -145,6 +145,7 @@ export class PrisonerService {
       where: { id: prisonerId, is_active: true },
       relations: {
         punishments: true,
+        firs: true,
       },
     });
 

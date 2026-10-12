@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
 import { PrisonerModule } from './prisoner/prisoner.module';
+import { FirModule } from './fir/fir.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { PrisonerModule } from './prisoner/prisoner.module';
     AuthModule,
     UserModule,
     PrisonerModule,
+    FirModule,
   ],
   controllers: [AppController],
   providers: [AppService],

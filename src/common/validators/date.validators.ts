@@ -1,5 +1,6 @@
 import {
   registerDecorator,
+  ValidateBy,
   ValidationOptions,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -59,4 +60,28 @@ export function IsFutureDate(options?: ValidationOptions) {
       constraints: [],
       validator: IsFutureDateConstraint,
     });
+}
+
+// IsNotFutureDateTime — full datetime must not be in the future (for incident_date_time)
+@ValidatorConstraint({ name: 'IsNotFutureDateTime', async: false })
+class IsNotFutureDateTimeConstraint implements ValidatorConstraintInterface {
+  validate(value: string): boolean {
+    if (!value) return true; // let @IsDateString / @IsNotEmpty handle empty
+    return new Date(value) <= new Date(); // compares full datetime including time
+  }
+  defaultMessage(): string {
+    return 'Incident date and time cannot be in the future.';
+  }
+}
+
+export function IsNotFutureDateTime(
+  options?: ValidationOptions,
+): PropertyDecorator {
+  return ValidateBy(
+    {
+      name: 'IsNotFutureDateTime',
+      validator: new IsNotFutureDateTimeConstraint(),
+    },
+    options,
+  );
 }

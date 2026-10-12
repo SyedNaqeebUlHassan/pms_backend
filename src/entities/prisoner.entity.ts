@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { Punishment } from './punishment.entity';
+import { Fir } from './fir.entity';
 
 export enum PrisonerSex {
   MALE = 'male',
@@ -54,4 +55,7 @@ export class Prisoner {
 
   @OneToMany(() => Punishment, (punishment) => punishment.prisoner)
   punishments: Punishment[];
+
+  @OneToMany(() => Fir, (fir) => fir.prisoner)
+  firs: Fir[];
 }
