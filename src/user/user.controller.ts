@@ -2,7 +2,6 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
-  Delete,
   ForbiddenException,
   Get,
   HttpCode,
@@ -65,19 +64,5 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   async unblockUser(@Param('id') userId: string) {
     return this.userService.unBlockUser(userId);
-  }
-
-  @Roles([UserRole.ADMIN])
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  async deleteUser(
-    @CurrentUser('id') operatorId: string,
-    @Param('id') userId: string,
-  ) {
-    // Prevent user from deleting themselves
-    if (operatorId === userId) {
-      throw new ForbiddenException('You cannot delete your own account');
-    }
-    return this.userService.deleteUser(userId);
   }
 }

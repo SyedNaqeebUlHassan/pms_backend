@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -29,7 +28,7 @@ export class UserService {
     const whereClause = query?.trim()
       ? [
           { name: Like(`%${query.trim()}%`) },
-          { user_name: Like(`%${query.trim()}%`) },
+          { email: Like(`%${query.trim()}%`) },
         ]
       : {};
 
@@ -140,32 +139,6 @@ export class UserService {
       return {
         message: 'User unblocked successfully',
         user: findUser,
-      };
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  } // admin only
-
-  async deleteUser(userId: string) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const user = await queryRunner.manager.findOne(User, {
-        where: { id: userId },
-      });
-
-      if (!user) throw new NotFoundException('User not found');
-
-      await queryRunner.manager.remove(User, user);
-      await queryRunner.commitTransaction();
-
-      return {
-        message: 'User deleted successfully',
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
