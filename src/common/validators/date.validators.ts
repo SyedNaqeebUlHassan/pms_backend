@@ -4,6 +4,7 @@ import {
   ValidationOptions,
   ValidatorConstraint,
   ValidatorConstraintInterface,
+  ValidationArguments,
 } from 'class-validator';
 
 // ── IsPastDate ─────────────────────────────────────────────────────────
@@ -84,4 +85,33 @@ export function IsNotFutureDateTime(
     },
     options,
   );
+}
+
+export function IsAfterTime(
+  property: string,
+  options?: ValidationOptions,
+): PropertyDecorator {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'IsAfterTime',
+      target: object.constructor,
+      propertyName,
+      constraints: [property],
+      options,
+      validator: {
+        validate(value: string, args: ValidationArguments): boolean {
+          const [relatedPropertyName] = args.constraints as [string];
+          const relatedValue = (args.object as Record<string, string>)[
+            relatedPropertyName
+          ];
+          if (!value || !relatedValue) return true; // let other validators handle empty
+          return value > relatedValue; // "14:00" > "08:00" works because HH:MM string comparison is lexicographic
+        },
+        defaultMessage(args: ValidationArguments): string {
+          const [relatedPropertyName] = args.constraints as [string];
+          return `${args.property} must be later than ${relatedPropertyName}.`;
+        },
+      },
+    });
+  };
 }
