@@ -142,7 +142,7 @@ export class PrisonerService {
       throw new ForbiddenException('User account is blocked. Contact admin');
 
     const prisoner = await this.prisonerRepo.findOne({
-      where: { id: prisonerId, is_active: true },
+      where: { id: prisonerId },
       relations: {
         punishments: true,
         firs: true,
@@ -195,15 +195,6 @@ export class PrisonerService {
           if (!punishment) {
             throw new NotFoundException(
               `Punishment with id ${item.id} not found for this prisoner.`,
-            );
-          }
-
-          if (
-            punishment.status === PunishmentStatus.COMPLETED ||
-            punishment.status === PunishmentStatus.CANCELLED
-          ) {
-            throw new BadRequestException(
-              `Punishment ${item.id} is already ${punishment.status} and cannot be updated.`,
             );
           }
 
