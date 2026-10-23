@@ -19,6 +19,7 @@ import { UserRole } from 'src/entities/user.entity';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
 import { CreateFirDTO } from './dto/create-fir.dto';
 import { UpdateFirDTO } from './dto/update-fir.dto';
+import { LinkFirToPrisonerDTO } from './dto/link-fir-to-prisoner.dto';
 
 @UseGuards(RolesGuard)
 @Controller('api/fir')
@@ -62,5 +63,16 @@ export class FirController {
     @Body() dto: UpdateFirDTO,
   ) {
     return this.firService.updateFir(userId, id, dto);
+  }
+
+  @Roles([UserRole.ADMIN, UserRole.JAILOR])
+  @Post(':id/link')
+  @HttpCode(HttpStatus.CREATED)
+  async linkFirToPrisoner(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() dto: LinkFirToPrisonerDTO,
+  ) {
+    return this.firService.linkFirToPrisoner(userId, id, dto);
   }
 }

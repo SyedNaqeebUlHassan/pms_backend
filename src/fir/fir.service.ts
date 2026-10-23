@@ -12,6 +12,7 @@ import { User } from 'src/entities/user.entity';
 import { DataSource, ILike, QueryRunner, Repository } from 'typeorm';
 import { CreateFirDTO } from './dto/create-fir.dto';
 import { UpdateFirDTO } from './dto/update-fir.dto';
+import { LinkFirToPrisonerDTO } from './dto/link-fir-to-prisoner.dto';
 
 @Injectable()
 export class FirService {
@@ -265,6 +266,49 @@ export class FirService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async linkFirToPrisoner(
+    userId: string,
+    firId: string,
+    dto: LinkFirToPrisonerDTO,
+  ) {
+    const user = await this.userRepo.findOne({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.is_active)
+      throw new ForbiddenException('User account is blocked. Contact admin');
+
+    const fir = await this.firRepo.findOne({
+      where: { id: firId },
+      relations: { prisoner: true },
+    });
+    if (!fir) throw new NotFoundException('FIR not found');
+    if (fir.prisoner)
+      throw new BadRequestException('FIR is already linked to a prisoner.');
+
+    const prisoner = await this.prisonerRepo.findOne({
+      where: {
+        id: dto.prisoner_id,
+        is_active: true,
+      },
+    });
+
+    if (!prisoner)
+      throw new NotFoundException('Prisoner not found or is deactivated.');
+
+    fir.prisoner = prisoner;
+    fir.accused_name = prisoner.name;
+
+    await this.firRepo.save(fir);
+
+    return {
+      message: 'Fir linked to prisoner successfully',
+    };
   }
 
   // Helpers
