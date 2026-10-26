@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/entities/user.entity';
-import { DataSource, Like, Repository } from 'typeorm';
+import { DataSource, ILike, Raw, Repository } from 'typeorm';
 import { UpdateUserDTO } from './dto/update-user.dto';
 
 @Injectable()
@@ -27,8 +27,13 @@ export class UserService {
 
     const whereClause = query?.trim()
       ? [
-          { name: Like(`%${query.trim()}%`) },
-          { email: Like(`%${query.trim()}%`) },
+          { name: ILike(`%${query.trim()}%`) },
+          { email: ILike(`%${query.trim()}%`) },
+          {
+            role: Raw((alias) => `CAST(${alias} AS TEXT) ILIKE :roleSearch`, {
+              roleSearch: `%${query}%`,
+            }),
+          },
         ]
       : {};
 
@@ -43,6 +48,29 @@ export class UserService {
     };
   } // admin  only
 
+  async getOneUser(operatorId: string, userId: string) {
+    const operator = await this.userRepo.findOne({
+      where: {
+        id: operatorId,
+      },
+    });
+
+    if (!operator) throw new NotFoundException('User not found');
+
+    const user = await this.userRepo.findOne({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    return {
+      message: 'User fetched successfully',
+      user,
+    };
+  }
+
   async updateUserInformation(userId: string, dto: UpdateUserDTO) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -53,10 +81,11 @@ export class UserService {
       // Find requested user
 
       const findUser = await queryRunner.manager.findOne(User, {
-        where: { id: userId },
+        where: { id: userId, is_active: true },
       });
 
-      if (!findUser) throw new NotFoundException('Requested User not found');
+      if (!findUser)
+        throw new NotFoundException('Requested User not found or blocked');
 
       findUser.name = dto.name ?? findUser.name;
       findUser.role = dto.role ?? findUser.role;

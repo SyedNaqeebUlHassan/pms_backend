@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Prisoner } from 'src/entities/prisoner.entity';
 import { Punishment, PunishmentStatus } from 'src/entities/punishment.entity';
 import { User, UserRole } from 'src/entities/user.entity';
-import { DataSource, ILike, QueryRunner, Repository } from 'typeorm';
+import { DataSource, ILike, QueryRunner, Raw, Repository } from 'typeorm';
 import { CreatePrisonerDTO } from './dto/create-prisoner.dto';
 import { UpdatePrisonerDTO } from './dto/update-prisoner.dto';
 import { CreatePunishmentDTO } from './dto/create-punishment.dto';
@@ -117,6 +117,11 @@ export class PrisonerService {
           { name: ILike(`%${search}%`) },
           { prisoner_number: ILike(`%${search}%`) },
           { crime: ILike(`%${search}%`) },
+          {
+            sex: Raw((alias) => `CAST(${alias} AS TEXT) ILIKE :sexSearch`, {
+              sexSearch: `%${search}%`,
+            }),
+          },
         ]
       : {};
 

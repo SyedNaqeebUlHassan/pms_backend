@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Guard } from 'src/entities/guard.entity';
 import { User } from 'src/entities/user.entity';
-import { DataSource, ILike, QueryRunner, Repository } from 'typeorm';
+import { DataSource, ILike, QueryRunner, Raw, Repository } from 'typeorm';
 import { CreateGuardDTO } from './dto/create-guard.dto';
 import { UpdateGuardDTO } from './dto/update-guard.dto';
 
@@ -79,7 +79,15 @@ export class GuardService {
       throw new ForbiddenException('User account is blocked. Contact admin');
 
     const where = search
-      ? [{ name: ILike(`%${search}%`) }, { employee_no: ILike(`%${search}%`) }]
+      ? [
+          { name: ILike(`%${search}%`) },
+          { employee_no: ILike(`%${search}%`) },
+          {
+            sex: Raw((alias) => `CAST(${alias} AS TEXT) ILIKE :sexSearch`, {
+              sexSearch: `%${search}%`,
+            }),
+          },
+        ]
       : {};
 
     const guards = await this.guardRepo.find({

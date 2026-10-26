@@ -36,6 +36,16 @@ export class UserController {
   }
 
   @Roles([UserRole.ADMIN])
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async getOneUser(
+    @CurrentUser('id') operatorId: string,
+    @Param('id') userId: string,
+  ) {
+    return this.userService.getOneUser(operatorId, userId);
+  }
+
+  @Roles([UserRole.ADMIN])
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   async updateUserInformation(
