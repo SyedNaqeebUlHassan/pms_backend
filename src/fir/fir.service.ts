@@ -13,6 +13,11 @@ import { DataSource, ILike, QueryRunner, Repository } from 'typeorm';
 import { CreateFirDTO } from './dto/create-fir.dto';
 import { UpdateFirDTO } from './dto/update-fir.dto';
 import { LinkFirToPrisonerDTO } from './dto/link-fir-to-prisoner.dto';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import {
+  ActivityAction,
+  ActivityEntityType,
+} from 'src/entities/activity-log.entity';
 
 @Injectable()
 export class FirService {
@@ -26,6 +31,7 @@ export class FirService {
     @InjectRepository(Fir)
     private firRepo: Repository<Fir>,
 
+    private readonly activityLogService: ActivityLogsService,
     private dataSource: DataSource,
   ) {}
 
@@ -81,6 +87,17 @@ export class FirService {
       });
 
       const saved = await queryRunner.manager.save(Fir, fir);
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.CREATED,
+          entity_type: ActivityEntityType.FIR,
+          entity_id: saved.id,
+          description: `FIR ${saved.complaint_number} was created by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
 
       const fetchNewFir = await queryRunner.manager.findOne(Fir, {
         where: {
@@ -240,7 +257,18 @@ export class FirService {
         fir.status = dto.status;
       }
 
-      await queryRunner.manager.save(Fir, fir);
+      const savedFir = await queryRunner.manager.save(Fir, fir);
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.UPDATED,
+          entity_type: ActivityEntityType.FIR,
+          entity_id: savedFir.id,
+          description: `FIR ${savedFir.complaint_number} was updated by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
 
       const fetchNewFir = await queryRunner.manager.findOne(Fir, {
         where: {
@@ -273,42 +301,67 @@ export class FirService {
     firId: string,
     dto: LinkFirToPrisonerDTO,
   ) {
-    const user = await this.userRepo.findOne({
-      where: {
-        id: userId,
-      },
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
 
-    if (!user) throw new NotFoundException('User not found');
-    if (!user.is_active)
-      throw new ForbiddenException('User account is blocked. Contact admin');
+    try {
+      await queryRunner.startTransaction();
 
-    const fir = await this.firRepo.findOne({
-      where: { id: firId },
-      relations: { prisoner: true },
-    });
-    if (!fir) throw new NotFoundException('FIR not found');
-    if (fir.prisoner)
-      throw new BadRequestException('FIR is already linked to a prisoner.');
+      const user = await queryRunner.manager.findOne(User, {
+        where: {
+          id: userId,
+        },
+      });
 
-    const prisoner = await this.prisonerRepo.findOne({
-      where: {
-        id: dto.prisoner_id,
-        is_active: true,
-      },
-    });
+      if (!user) throw new NotFoundException('User not found');
+      if (!user.is_active)
+        throw new ForbiddenException('User account is blocked. Contact admin');
 
-    if (!prisoner)
-      throw new NotFoundException('Prisoner not found or is deactivated.');
+      const fir = await queryRunner.manager.findOne(Fir, {
+        where: { id: firId },
+        relations: { prisoner: true },
+      });
+      if (!fir) throw new NotFoundException('FIR not found');
+      if (fir.prisoner)
+        throw new BadRequestException('FIR is already linked to a prisoner.');
 
-    fir.prisoner = prisoner;
-    fir.accused_name = prisoner.name;
+      const prisoner = await queryRunner.manager.findOne(Prisoner, {
+        where: {
+          id: dto.prisoner_id,
+          is_active: true,
+        },
+      });
 
-    await this.firRepo.save(fir);
+      if (!prisoner)
+        throw new NotFoundException('Prisoner not found or is deactivated.');
 
-    return {
-      message: 'Fir linked to prisoner successfully',
-    };
+      fir.prisoner = prisoner;
+      fir.accused_name = prisoner.name;
+
+      await queryRunner.manager.save(Fir, fir);
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.LINKED,
+          entity_type: ActivityEntityType.FIR,
+          entity_id: fir.id,
+          description: `FIR ${fir.complaint_number}  linked to ${prisoner.name} by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
+
+      await queryRunner.commitTransaction();
+
+      return {
+        message: 'Fir linked to prisoner successfully',
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   // Helpers

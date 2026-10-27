@@ -11,6 +11,11 @@ import { User } from 'src/entities/user.entity';
 import { DataSource, ILike, QueryRunner, Raw, Repository } from 'typeorm';
 import { CreateGuardDTO } from './dto/create-guard.dto';
 import { UpdateGuardDTO } from './dto/update-guard.dto';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import {
+  ActivityAction,
+  ActivityEntityType,
+} from 'src/entities/activity-log.entity';
 
 @Injectable()
 export class GuardService {
@@ -21,6 +26,7 @@ export class GuardService {
     @InjectRepository(Guard)
     private guardRepo: Repository<Guard>,
 
+    private readonly activityLogService: ActivityLogsService,
     private dataSource: DataSource,
   ) {}
 
@@ -50,6 +56,17 @@ export class GuardService {
       });
 
       const saveGuard = await queryRunner.manager.save(Guard, guard);
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.CREATED,
+          entity_type: ActivityEntityType.GUARD,
+          entity_id: saveGuard.id,
+          description: `Guard ${saveGuard.name} was added by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
 
       const fetchSavedGuard = await queryRunner.manager.findOne(Guard, {
         where: { id: saveGuard.id },
@@ -151,7 +168,18 @@ export class GuardService {
       guard.shift_start = dto.shift_start ?? guard.shift_start;
       guard.shift_end = dto.shift_end ?? guard.shift_end;
 
-      await queryRunner.manager.save(Guard, guard);
+      const saveGuard = await queryRunner.manager.save(Guard, guard);
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.UPDATED,
+          entity_type: ActivityEntityType.GUARD,
+          entity_id: saveGuard.id,
+          description: `Guard ${saveGuard.name} was updated by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
 
       const fetchSavedGuard = await queryRunner.manager.findOne(Guard, {
         where: { id: guardId },
@@ -198,6 +226,17 @@ export class GuardService {
         throw new BadRequestException('guard is already inactive');
 
       guard.is_active = false;
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.UPDATED,
+          entity_type: ActivityEntityType.GUARD,
+          entity_id: guard.id,
+          description: `Guard ${guard.name} was deactivated by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
 
       await queryRunner.manager.save(Guard, guard);
 

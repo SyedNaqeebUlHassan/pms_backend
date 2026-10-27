@@ -8,6 +8,7 @@ import { UserModule } from './user/user.module';
 import { PrisonerModule } from './prisoner/prisoner.module';
 import { FirModule } from './fir/fir.module';
 import { GuardModule } from './guard/guard.module';
+import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { GuardModule } from './guard/guard.module';
     PrisonerModule,
     FirModule,
     GuardModule,
+    ActivityLogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

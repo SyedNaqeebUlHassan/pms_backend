@@ -13,6 +13,11 @@ import { DataSource, ILike, QueryRunner, Raw, Repository } from 'typeorm';
 import { CreatePrisonerDTO } from './dto/create-prisoner.dto';
 import { UpdatePrisonerDTO } from './dto/update-prisoner.dto';
 import { CreatePunishmentDTO } from './dto/create-punishment.dto';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import {
+  ActivityAction,
+  ActivityEntityType,
+} from 'src/entities/activity-log.entity';
 
 @Injectable()
 export class PrisonerService {
@@ -26,6 +31,7 @@ export class PrisonerService {
     @InjectRepository(Punishment)
     private punishmentRepo: Repository<Punishment>,
 
+    private readonly activityLogService: ActivityLogsService,
     private dataSource: DataSource,
   ) {}
 
@@ -75,6 +81,17 @@ export class PrisonerService {
 
         await queryRunner.manager.save(Punishment, createPunishment);
       }
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.CREATED,
+          entity_type: ActivityEntityType.PRISONER,
+          entity_id: savedPrisoner.id,
+          description: `Prisoner ${savedPrisoner.prisoner_number} was added by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
 
       const fetchedSavedPrisoner = await queryRunner.manager.findOne(Prisoner, {
         where: { id: savedPrisoner.id },
@@ -239,6 +256,17 @@ export class PrisonerService {
           'Something went wrong. Try again later!',
         );
 
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.UPDATED,
+          entity_type: ActivityEntityType.PRISONER,
+          entity_id: prisonerId,
+          description: `Prisoner ${updated.prisoner_number} was updated by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
+
       await queryRunner.commitTransaction();
 
       return {
@@ -286,6 +314,17 @@ export class PrisonerService {
       prisoner.is_active = false;
 
       await queryRunner.manager.save(Prisoner, prisoner);
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.UPDATED,
+          entity_type: ActivityEntityType.PRISONER,
+          entity_id: prisonerId,
+          description: `Prisoner ${prisoner.prisoner_number} was released by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
 
       await queryRunner.commitTransaction();
 
@@ -337,6 +376,17 @@ export class PrisonerService {
       });
 
       const saved = await queryRunner.manager.save(Punishment, punishment);
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.CREATED,
+          entity_type: ActivityEntityType.PRISONER,
+          entity_id: prisonerId,
+          description: `Punishment for Prisoner ${prisoner.prisoner_number} was added by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
 
       await queryRunner.commitTransaction();
 
