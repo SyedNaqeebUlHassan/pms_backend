@@ -76,4 +76,14 @@ export class GuardController {
   ) {
     return this.guardService.deactivateGuard(userId, id);
   }
+
+  @Roles([UserRole.ADMIN, UserRole.JAILOR])
+  @Post(':id/activate')
+  @HttpCode(HttpStatus.OK)
+  async activateGuard(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.guardService.activateGuard(userId, id);
+  }
 }

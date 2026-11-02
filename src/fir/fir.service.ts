@@ -233,27 +233,7 @@ export class FirService {
       if (dto.offense_type) fir.offense_type = dto.offense_type;
       if (dto.description) fir.description = dto.description;
 
-      // Status transition validation
       if (dto.status) {
-        const allowed: Record<FirStatus, FirStatus[]> = {
-          [FirStatus.REGISTERED]: [
-            FirStatus.CONVICTED,
-            FirStatus.ACQUITTED,
-            FirStatus.CLOSED,
-            FirStatus.CANCELLED,
-          ],
-          [FirStatus.CONVICTED]: [FirStatus.CLOSED, FirStatus.CANCELLED],
-          [FirStatus.ACQUITTED]: [FirStatus.CLOSED, FirStatus.CANCELLED],
-          [FirStatus.CLOSED]: [],
-          [FirStatus.CANCELLED]: [],
-        };
-
-        if (!allowed[fir.status].includes(dto.status)) {
-          throw new BadRequestException(
-            `Cannot transition FIR status from '${fir.status}' to '${dto.status}'.`,
-          );
-        }
-
         fir.status = dto.status;
       }
 

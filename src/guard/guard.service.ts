@@ -253,6 +253,57 @@ export class GuardService {
     }
   }
 
+  async activateGuard(userId: string, guardId: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+
+    try {
+      await queryRunner.startTransaction();
+
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+      });
+      if (!user) throw new NotFoundException('User not found');
+      if (!user.is_active)
+        throw new ForbiddenException('User account is blocked. Contact admin');
+
+      const guard = await queryRunner.manager.findOne(Guard, {
+        where: { id: guardId },
+      });
+
+      if (!guard) throw new NotFoundException('Guard not found');
+
+      if (guard.is_active)
+        throw new BadRequestException('guard is already active');
+
+      guard.is_active = true;
+
+      await this.activityLogService.logActivity(
+        {
+          action: ActivityAction.UPDATED,
+          entity_type: ActivityEntityType.GUARD,
+          entity_id: guard.id,
+          description: `Guard ${guard.name} was activated by ${user.name} - ${user.role}`,
+          performed_by: user,
+        },
+        queryRunner.manager,
+      );
+
+      await queryRunner.manager.save(Guard, guard);
+
+      await queryRunner.commitTransaction();
+
+      return {
+        message: 'Guard activated successfully',
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   // helper
 
   private async generateEmployeeNo(queryRunner: QueryRunner): Promise<string> {
